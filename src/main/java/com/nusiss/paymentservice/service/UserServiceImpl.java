@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Service
 public class UserServiceImpl implements UserService{
 
@@ -17,5 +19,11 @@ public class UserServiceImpl implements UserService{
     public ResponseEntity<ApiResponse<User>> getUserById(Integer id) {
 
         return userFeignClient.getUserById(id);
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<User>> getCurrentUserInfo(String authToken) {
+
+        return userFeignClient.getCurrentUserInfo(authToken);
     }
 }
