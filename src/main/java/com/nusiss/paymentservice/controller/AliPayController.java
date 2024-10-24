@@ -12,7 +12,9 @@ import com.nusiss.paymentservice.entity.Payment;
 import com.nusiss.paymentservice.service.OrderServiceFeignClient;
 import com.nusiss.paymentservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -31,7 +33,7 @@ public class AliPayController {
     private static final String GATEWAY_URL = "https://openapi.alipaydev.com/gateway.do";
     private static final String FORMAT = "JSON";
     private static final String CHARSET = "UTF-8";
-    //签名方式
+    // 签名方式
     private static final String SIGN_TYPE = "RSA2";
 
     @Autowired
@@ -40,20 +42,18 @@ public class AliPayController {
     @Autowired
     private PaymentService paymentService;
 
-    // Todo: 解决OrderService调用的问题
-    //@Autowired
-    //private OrderServiceFeignClient orderServiceFeignClient;
+    @Resource
+    private OrderServiceFeignClient orderServiceFeignClient;
 
     @GetMapping("/pay")
     @Operation(summary = "pay")
     public String pay(String orderId, HttpServletResponse httpResponse) throws Exception {
-        System.out.println("123");
         // 调用 order-service 获取订单信息
-        //Order order = orderServiceFeignClient.getOrderById(orderId);
+        Order order = orderServiceFeignClient.getOrderById(orderId);
 
-//        if (order == null) {
-//            throw new RuntimeException("订单不存在");
-//        }
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
 
         // 构造支付请求
         AlipayClient alipayClient = new DefaultAlipayClient(GATEWAY_URL, aliPayConfig.getAppId(),
@@ -63,12 +63,12 @@ public class AliPayController {
         request.setNotifyUrl(aliPayConfig.getNotifyUrl());
 
         JSONObject bizContent = new JSONObject();
-//        bizContent.set("orderId", order.getId());  // 使用获取到的订单信息
-//        bizContent.set("totalPrice", order.getTotalPrice().toString());
-//        bizContent.set("subject", order.getId);   // 支付的名称(由于本项目中没有商品名称，所以使用订单号代替)
+        bizContent.set("orderId", order.getId());  // 使用获取到的订单信息
+        bizContent.set("totalPrice", order.getTotalPrice().toString());
+        bizContent.set("subject", order.getId());   // 支付的名称(由于本项目中没有商品名称，所以使用订单号代替)
         bizContent.set("product_code", "FAST_INSTANT_TRADE_PAY");  // 固定配置
-        bizContent.set("orderId", orderId);  // 使用获取到的订单信息
-        bizContent.set("totalPrice", "0.01");
+//        bizContent.set("orderId", orderId);  // 使用获取到的订单信息
+//        bizContent.set("totalPrice", "0.01");
 
         request.setBizContent(bizContent.toString());
         request.setReturnUrl(aliPayConfig.getReturnUrl());
@@ -109,7 +109,7 @@ public class AliPayController {
                 paymentService.save(payment);
 
                 // 通知 OrderService 支付完成
-                //orderServiceFeignClient.notifyOrderPaymentSuccess(payment.getOrderId());
+                orderServiceFeignClient.paySuccess(payment.getOrderId());
 
                 return "success";
             }
