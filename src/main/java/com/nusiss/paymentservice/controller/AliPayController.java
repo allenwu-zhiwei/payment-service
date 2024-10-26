@@ -17,12 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
+import java.util.stream.Collectors;
 
 // https://natapp.cn 本地测试时可使用该内网穿透工具，将本地服务映射到公网，然后支付宝才能访问到我们的接口
 @RestController
@@ -30,7 +32,7 @@ import java.util.Map;
 public class AliPayController {
 
     // 支付宝沙箱网关地址
-    private static final String GATEWAY_URL = "https://openapi.alipaydev.com/gateway.do";
+    private static final String GATEWAY_URL = "https://openapi-sandbox.dl.alipaydev.com/gateway.do";
     private static final String FORMAT = "JSON";
     private static final String CHARSET = "UTF-8";
     // 签名方式
@@ -42,18 +44,18 @@ public class AliPayController {
     @Autowired
     private PaymentService paymentService;
 
-    @Resource
-    private OrderServiceFeignClient orderServiceFeignClient;
+//    @Autowired
+//    private OrderServiceFeignClient orderServiceFeignClient;
 
     @GetMapping("/pay")
     @Operation(summary = "pay")
-    public String pay(String orderId, HttpServletResponse httpResponse) throws Exception {
+    public void pay(@RequestParam String orderId, HttpServletResponse httpResponse) throws Exception {
         // 调用 order-service 获取订单信息
-        Order order = orderServiceFeignClient.getOrderById(orderId);
-
-        if (order == null) {
-            throw new RuntimeException("订单不存在");
-        }
+//        Order order = orderServiceFeignClient.getOrderById(orderId);
+//
+//        if (order == null) {
+//            throw new RuntimeException("订单不存在");
+//        }
 
         // 构造支付请求
         AlipayClient alipayClient = new DefaultAlipayClient(GATEWAY_URL, aliPayConfig.getAppId(),
@@ -63,12 +65,14 @@ public class AliPayController {
         request.setNotifyUrl(aliPayConfig.getNotifyUrl());
 
         JSONObject bizContent = new JSONObject();
-        bizContent.set("orderId", order.getId());  // 使用获取到的订单信息
-        bizContent.set("totalPrice", order.getTotalPrice().toString());
-        bizContent.set("subject", order.getId());   // 支付的名称(由于本项目中没有商品名称，所以使用订单号代替)
+//        bizContent.set("orderId", order.getId());
+//        bizContent.set("totalPrice", order.getTotalPrice().toString());
+//        bizContent.set("subject", order.getId());   // 支付的名称(由于本项目中没有订单名称，所以使用订单号代替)
+
         bizContent.set("product_code", "FAST_INSTANT_TRADE_PAY");  // 固定配置
-//        bizContent.set("orderId", orderId);  // 使用获取到的订单信息
-//        bizContent.set("totalPrice", "0.01");
+        bizContent.set("total_amount", "123");  // 使用获取到的订单信息
+        bizContent.set("out_trade_no", new Random().ints(10, 0, 10).mapToObj(String::valueOf).collect(Collectors.joining()));
+        bizContent.set("subject", "test");  // 使用获取到的订单信息
 
         request.setBizContent(bizContent.toString());
         request.setReturnUrl(aliPayConfig.getReturnUrl());
@@ -79,7 +83,7 @@ public class AliPayController {
         httpResponse.getWriter().write(form);
         httpResponse.getWriter().flush();
         httpResponse.getWriter().close();
-        return "123";
+        System.out.println("123");
     }
 
     @PostMapping("/notify")
@@ -109,7 +113,7 @@ public class AliPayController {
                 paymentService.save(payment);
 
                 // 通知 OrderService 支付完成
-                orderServiceFeignClient.paySuccess(payment.getOrderId());
+                //orderServiceFeignClient.paySuccess(payment.getOrderId());
 
                 return "success";
             }
