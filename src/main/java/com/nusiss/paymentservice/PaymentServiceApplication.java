@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = "com.nusiss.commonservice.feign")
+@EnableFeignClients(basePackages = {"com.nusiss.commonservice.feign", "com.nusiss.orderservice.client"})
 public class PaymentServiceApplication {
 
 	public static void main(String[] args) {
