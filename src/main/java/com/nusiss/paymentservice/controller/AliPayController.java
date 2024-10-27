@@ -43,6 +43,7 @@ public class AliPayController {
     @Autowired
     private OrderServiceFeignClient orderServiceFeignClient;
 
+    // url_sample: /api/payment/pay?orderId=1&price=123
     @GetMapping("/pay")
     @Operation(summary = "pay")
     public void pay(@RequestParam String orderId, @RequestParam String price, HttpServletResponse httpResponse) throws Exception {
