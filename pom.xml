@@ -82,11 +82,6 @@
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>com.nusiss</groupId>
-			<artifactId>order-service</artifactId> <!-- Make sure the artifactId matches -->
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
 			<groupId>com.alipay.sdk</groupId>
 			<artifactId>alipay-sdk-java</artifactId>
 			<version>4.22.110.ALL</version>
