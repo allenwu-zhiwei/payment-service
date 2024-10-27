@@ -1,20 +1,15 @@
 package com.nusiss.paymentservice.controller;
 
 import cn.hutool.json.JSONObject;
-import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.nusiss.paymentservice.config.AliPayConfig;
-import com.nusiss.paymentservice.entity.Order;
 import com.nusiss.paymentservice.entity.Payment;
-import com.nusiss.paymentservice.service.OrderServiceFeignClient;
 import com.nusiss.paymentservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
