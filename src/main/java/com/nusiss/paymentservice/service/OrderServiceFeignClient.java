@@ -1,6 +1,5 @@
 package com.nusiss.paymentservice.service;
 
-import com.nusiss.orderservice.config.ApiResponse;
 import com.nusiss.paymentservice.entity.Order;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +11,6 @@ public interface OrderServiceFeignClient {
     @GetMapping("/api/orders/{orderId}")
     Order getOrderById(@PathVariable("orderId") String orderId);
 
-    @GetMapping("/order/inner/paySuccess")
-    ApiResponse paySuccess(Long orderId);
+    //@GetMapping("/order/inner/paySuccess")
+    //ApiResponse paySuccess(Long orderId);
 }
