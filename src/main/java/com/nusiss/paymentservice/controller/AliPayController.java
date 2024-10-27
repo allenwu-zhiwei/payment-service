@@ -7,6 +7,7 @@ import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.nusiss.paymentservice.config.AliPayConfig;
 import com.nusiss.paymentservice.entity.Payment;
+import com.nusiss.paymentservice.service.OrderServiceFeignClient;
 import com.nusiss.paymentservice.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,12 +40,12 @@ public class AliPayController {
     @Autowired
     private PaymentService paymentService;
 
-//    @Autowired
-//    private OrderServiceFeignClient orderServiceFeignClient;
+    @Autowired
+    private OrderServiceFeignClient orderServiceFeignClient;
 
     @GetMapping("/pay")
     @Operation(summary = "pay")
-    public void pay(@RequestParam String orderId, HttpServletResponse httpResponse) throws Exception {
+    public void pay(@RequestParam String orderId, @RequestParam String price, HttpServletResponse httpResponse) throws Exception {
         // 调用 order-service 获取订单信息
 //        Order order = orderServiceFeignClient.getOrderById(orderId);
 //
@@ -58,17 +59,15 @@ public class AliPayController {
 
         AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
         request.setNotifyUrl(aliPayConfig.getNotifyUrl());
-
         JSONObject bizContent = new JSONObject();
-//        bizContent.set("orderId", order.getId());
-//        bizContent.set("totalPrice", order.getTotalPrice().toString());
-//        bizContent.set("subject", order.getId());   // 支付的名称(由于本项目中没有订单名称，所以使用订单号代替)
-
+        bizContent.set("out_trade_no", orderId);
+        bizContent.set("total_amount", price);
+        bizContent.set("subject", orderId);   // 支付的名称(由于本项目中没有订单名称，所以使用订单号代替)
         bizContent.set("product_code", "FAST_INSTANT_TRADE_PAY");  // 固定配置
-        bizContent.set("total_amount", "123");  // 使用获取到的订单信息
-        bizContent.set("out_trade_no", new Random().ints(10, 0, 10).mapToObj(String::valueOf).collect(Collectors.joining()));
-        bizContent.set("subject", "test");  // 使用获取到的订单信息
 
+//        bizContent.set("total_amount", "123");  // 使用获取到的订单信息
+//        bizContent.set("out_trade_no", new Random().ints(10, 0, 10).mapToObj(String::valueOf).collect(Collectors.joining()));
+//        bizContent.set("subject", "test");  // 使用获取到的订单信息
         request.setBizContent(bizContent.toString());
         request.setReturnUrl(aliPayConfig.getReturnUrl());
 
@@ -78,7 +77,6 @@ public class AliPayController {
         httpResponse.getWriter().write(form);
         httpResponse.getWriter().flush();
         httpResponse.getWriter().close();
-        System.out.println("123");
     }
 
     @PostMapping("/notify")
@@ -108,7 +106,7 @@ public class AliPayController {
                 paymentService.save(payment);
 
                 // 通知 OrderService 支付完成
-                //orderServiceFeignClient.paySuccess(payment.getOrderId());
+                orderServiceFeignClient.paySuccess(payment.getOrderId());
 
                 return "success";
             }
