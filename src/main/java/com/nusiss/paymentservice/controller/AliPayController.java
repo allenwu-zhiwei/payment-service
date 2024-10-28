@@ -6,6 +6,7 @@ import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.nusiss.paymentservice.config.AliPayConfig;
+import com.nusiss.paymentservice.entity.Order;
 import com.nusiss.paymentservice.entity.Payment;
 import com.nusiss.paymentservice.service.OrderServiceFeignClient;
 import com.nusiss.paymentservice.service.PaymentService;
@@ -46,13 +47,13 @@ public class AliPayController {
     // url_sample: /api/payment/pay?orderId=1&price=123
     @GetMapping("/pay")
     @Operation(summary = "pay")
-    public void pay(@RequestParam String orderId, @RequestParam String price, HttpServletResponse httpResponse) throws Exception {
+    public void pay(@RequestParam String orderId, HttpServletResponse httpResponse) throws Exception {
         // 调用 order-service 获取订单信息
-//        Order order = orderServiceFeignClient.getOrderById(orderId);
-//
-//        if (order == null) {
-//            throw new RuntimeException("订单不存在");
-//        }
+        Order order = orderServiceFeignClient.getOrderById(orderId);
+
+        if (order == null) {
+            throw new RuntimeException("订单不存在");
+        }
 
         // 构造支付请求
         AlipayClient alipayClient = new DefaultAlipayClient(GATEWAY_URL, aliPayConfig.getAppId(),
@@ -62,7 +63,7 @@ public class AliPayController {
         request.setNotifyUrl(aliPayConfig.getNotifyUrl());
         JSONObject bizContent = new JSONObject();
         bizContent.set("out_trade_no", orderId);
-        bizContent.set("total_amount", price);
+        bizContent.set("total_amount", order.getTotalPrice());
         bizContent.set("subject", orderId);   // 支付的名称(由于本项目中没有订单名称，所以使用订单号代替)
         bizContent.set("product_code", "FAST_INSTANT_TRADE_PAY");  // 固定配置
 
