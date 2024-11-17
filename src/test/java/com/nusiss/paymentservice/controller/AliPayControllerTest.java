@@ -1,98 +1,92 @@
 package com.nusiss.paymentservice.controller;
 
-import static org.mockito.Mockito.when;
-
+import com.alipay.api.AlipayClient;
+import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.nusiss.paymentservice.config.AliPayConfig;
 import com.nusiss.paymentservice.entity.Order;
+import com.nusiss.paymentservice.entity.Payment;
 import com.nusiss.paymentservice.service.OrderServiceFeignClient;
 import com.nusiss.paymentservice.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.util.Date;
-
-import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
-@ContextConfiguration(classes = {AliPayController.class, AliPayConfig.class})
-@ExtendWith(SpringExtension.class)
-@DisabledInAotMode
+import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 class AliPayControllerTest {
-    @Autowired
+
+    @Mock
     private AliPayConfig aliPayConfig;
 
-    @Autowired
-    private AliPayController aliPayController;
-
-    @MockBean
-    private OrderServiceFeignClient orderServiceFeignClient;
-
-    @MockBean
+    @Mock
     private PaymentService paymentService;
 
-//    /**
-//     * Test {@link AliPayController#pay(String, HttpServletResponse)}.
-//     * <p>
-//     * Method under test: {@link AliPayController#pay(String, HttpServletResponse)}
-//     */
-//    @Test
-//    @DisplayName("Test pay(String, HttpServletResponse)")
-//    void testPay() throws Exception {
-//        // Arrange
-//        Order order = new Order();
-//        order.setCreateDatetime(Date.from(LocalDate.of(1970, 1, 1).atStartOfDay().atZone(ZoneOffset.UTC).toInstant()));
-//        order.setCreateUser("Create User");
-//        order.setId(1L);
-//        order.setOrderDate(Date.from(LocalDate.of(1970, 1, 1).atStartOfDay().atZone(ZoneOffset.UTC).toInstant()));
-//        order.setOrderId(1L);
-//        order.setStatus("Status");
-//        order.setTotalPrice(new BigDecimal("2.3"));
-//        order.setUpdateDatetime(Date.from(LocalDate.of(1970, 1, 1).atStartOfDay().atZone(ZoneOffset.UTC).toInstant()));
-//        order.setUpdateUser("2020-03-01");
-//        when(orderServiceFeignClient.getOrderById(Mockito.<String>any())).thenReturn(order);
-//        MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get("/api/payment/pay")
-//                .param("orderId", String.valueOf(1));
-//
-//        // Act
-//        ResultActions actualPerformResult = MockMvcBuilders.standaloneSetup(aliPayController)
-//                .build()
-//                .perform(requestBuilder);
-//
-//        // Assert
-//        actualPerformResult.andExpect(MockMvcResultMatchers.status().is(400));
-//    }
+    @Mock
+    private OrderServiceFeignClient orderServiceFeignClient;
 
-    /**
-     * Test {@link AliPayController#payNotify(HttpServletRequest)}.
-     * <p>
-     * Method under test: {@link AliPayController#payNotify(HttpServletRequest)}
-     */
+    @Mock
+    private AlipayClient alipayClient;
+
+    @InjectMocks
+    private AliPayController aliPayController;
+
+    private MockHttpServletResponse response;
+    private MockHttpServletRequest request;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        response = new MockHttpServletResponse();
+        request = new MockHttpServletRequest();
+
+        // Configure AliPayConfig mock
+        when(aliPayConfig.getAppId()).thenReturn("test-app-id");
+        when(aliPayConfig.getAppPrivateKey()).thenReturn("test-private-key");
+        when(aliPayConfig.getAlipayPublicKey()).thenReturn("test-public-key");
+        when(aliPayConfig.getNotifyUrl()).thenReturn("http://test.com/notify");
+        when(aliPayConfig.getReturnUrl()).thenReturn("http://test.com/return");
+    }
+
+
+
     @Test
-    @DisplayName("Test payNotify(HttpServletRequest)")
-    void testPayNotify() throws Exception {
+    void pay_ShouldThrowException_WhenOrderNotFound() {
         // Arrange
-        MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.post("/api/payment/notify");
-        // Act and Assert
-        MockMvcBuilders.standaloneSetup(aliPayController)
-                .build()
-                .perform(requestBuilder)
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.content().contentType("text/plain;charset=ISO-8859-1"))
-                .andExpect(MockMvcResultMatchers.content().string("fail"));
+        String orderId = "123";
+        when(orderServiceFeignClient.getOrderById(orderId)).thenReturn(null);
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            aliPayController.pay(orderId, response);
+        });
+    }
+
+
+
+    @Test
+    void payNotify_ShouldReturnFail_WhenTradeStatusNotSuccess() throws Exception {
+        // Arrange
+        request.setParameter("trade_status", "TRADE_FAILED");
+
+        // Act
+        String result = aliPayController.payNotify(request);
+
+        // Assert
+        assertEquals("fail", result);
+        verify(paymentService, never()).save(any(Payment.class));
+        verify(orderServiceFeignClient, never()).paySuccess(any());
     }
 }
